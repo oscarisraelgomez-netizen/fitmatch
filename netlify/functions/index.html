@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FitMatch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#12151A;
+    --ink-2:#1B2027;
+    --ink-3:#252B33;
+    --paper:#F5F3EE;
+    --line: rgba(255,255,255,0.09);
+    --pulse:#FF5A3C;
+    --pulse-dim: rgba(255,90,60,0.18);
+    --volt:#D4FF3F;
+    --calm:#8FD9C4;
+    --calm-dim: rgba(143,217,196,0.16);
+    --text:#F5F3EE;
+    --text-soft:#9AA1AC;
+    --text-faint:#5B6270;
+    --radius-card: 26px;
+    --radius-md: 16px;
+    --radius-sm: 10px;
+    --font-d: 'Oswald', sans-serif;
+    --font-b: 'Inter', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:var(--font-b);
+    background: radial-gradient(circle at 50% 0%, #1a1f27 0%, #0c0e12 70%);
+    color:var(--text);
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    min-height:100vh;
+    padding:0;
+    -webkit-font-smoothing:antialiased;
+  }
+  #frame{
+    width:100%;
+    max-width:430px;
+    min-height:100vh;
+    background:var(--ink);
+    position:relative;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    border-left:1px solid var(--line);
+    border-right:1px solid var(--line);
+  }
+  ::selection{ background:var(--pulse); color:var(--ink); }
+  button{ font-family:inherit; cursor:pointer; }
+  input, select{ font-family:inherit; }
+
+  /* ---------- ONBOARDING ---------- */
+  #onboarding{
+    padding:44px 26px 32px;
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+  }
+  .brand{
+    font-family:var(--font-d);
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:0.4px;
+    color:var(--pulse);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:38px;
+  }
+  .brand .dot{ width:8px; height:8px; border-radius:50%; background:var(--volt); }
+  #onboarding h1{
+    font-family:var(--font-d);
+    font-weight:600;
+    font-size:34px;
+    line-height:1.08;
+    margin:0 0 10px;
+    max-width:280px;
+  }
+  #onboarding h1 span{ color:var(--pulse); }
+  #onboarding p.sub{
+    color:var(--text-soft);
+    font-size:15px;
+    line-height:1.5;
+    margin:0 0 32px;
+    max-width:320px;
+  }
+  .field-label{
+    font-size:13px;
+    color:var(--text-soft);
+    margin:0 0 8px;
+    display:block;
+  }
+  .field{ margin-bottom:22px; }
+  #onboarding input[type="text"]{
+    width:100%;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    padding:14px 16px;
+    border-radius:var(--radius-sm);
+    font-size:16px;
+    outline:none;
+  }
+  #onboarding input[type="text"]:focus{ border-color:var(--pulse); }
+  .type-row{ display:flex; gap:10px; }
+  .type-opt{
+    flex:1;
+    text-align:center;
+    padding:13px 8px;
+    border-radius:var(--radius-sm);
+    border:1px solid var(--line);
+    background:var(--ink-2);
+    color:var(--text-soft);
+    font-size:14px;
+    font-weight:600;
+    transition:.15s;
+  }
+  .type-opt input{ display:none; }
+  .type-opt.active{
+    border-color:var(--pulse);
+    background:var(--pulse-dim);
+    color:var(--text);
+  }
+  .photo-row{ display:flex; align-items:center; gap:16px; }
+  .photo-preview{
+    width:64px; height:64px; border-radius:50%;
+    background:var(--ink-2); border:1.5px dashed var(--text-faint);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-d); font-size:20px; color:var(--text-faint);
+    overflow:hidden; flex-shrink:0;
+  }
+  .photo-preview img{ width:100%; height:100%; object-fit:cover; }
+  .upload-btn{
+    background:none; border:1px solid var(--line); color:var(--text);
+    padding:10px 16px; border-radius:99px; font-size:13px; font-weight:600;
+  }
+  #onboarding-form{ display:flex; flex-direction:column; flex:1; }
+  #start-btn{
+    margin-top:auto;
+    background:var(--pulse);
+    color:var(--ink);
+    border:none;
+    padding:16px;
+    border-radius:var(--radius-sm);
+    font-weight:700;
+    font-size:16px;
+    letter-spacing:0.2px;
+  }
+  #start-btn:disabled{ opacity:.4; }
+  .fine{ font-size:12px; color:var(--text-faint); margin-top:14px; line-height:1.5; }
+
+  /* ---------- APP SHELL ---------- */
+  #app-shell{ display:none; flex-direction:column; height:100vh; }
+  header.top{
+    padding:18px 20px 14px;
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid var(--line);
+    flex-shrink:0;
+  }
+  header.top .who{ display:flex; align-items:center; gap:10px; }
+  .avatar{
+    width:38px; height:38px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-d); font-weight:600; font-size:14px;
+    color:var(--ink); flex-shrink:0; overflow:hidden;
+  }
+  .avatar img{ width:100%; height:100%; object-fit:cover; }
+  header.top .title{ font-family:var(--font-d); font-weight:600; font-size:17px; }
+  header.top .sub-line{ font-size:11.5px; color:var(--text-soft); margin-top:1px; }
+  .live-pill{
+    font-size:11.5px; color:var(--text-soft); display:flex; align-items:center; gap:6px;
+  }
+  .live-pill .blip{ width:7px; height:7px; border-radius:50%; background:#4ADE80; box-shadow:0 0 0 0 rgba(74,222,128,.5); animation:blip 1.8s infinite; }
+  @keyframes blip{ 0%{box-shadow:0 0 0 0 rgba(74,222,128,.45);} 70%{box-shadow:0 0 0 7px rgba(74,222,128,0);} 100%{box-shadow:0 0 0 0 rgba(74,222,128,0);} }
+
+  main{ flex:1; position:relative; overflow:hidden; }
+  section.tab{ position:absolute; inset:0; display:none; flex-direction:column; }
+  section.tab.active{ display:flex; }
+
+  /* ---------- DESCUBRE / SWIPE ---------- */
+  #tab-descubre{ padding:18px 20px 10px; align-items:center; }
+  #card-stack{
+    position:relative; width:100%; max-width:340px; flex:1;
+    margin:6px 0 14px;
+  }
+  .card{
+    position:absolute; inset:0;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    border-radius:var(--radius-card);
+    overflow:hidden;
+    display:flex; flex-direction:column;
+    transition: transform .25s ease, opacity .25s ease;
+    user-select:none;
+  }
+  .card.behind{ transform: scale(.94) translateY(14px); opacity:.6; pointer-events:none; }
+  .card .photo-zone{
+    flex:1; position:relative;
+    display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(circle at 30% 20%, rgba(255,255,255,0.06), transparent 60%);
+  }
+  .badge-big{
+    width:118px; height:118px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-d); font-size:40px; font-weight:600;
+  }
+  .tag-pill{
+    position:absolute; top:16px; left:16px;
+    font-size:11.5px; font-weight:700; letter-spacing:.3px;
+    padding:6px 12px; border-radius:99px;
+    color:var(--ink);
+  }
+  .distance-pill{
+    position:absolute; top:16px; right:16px;
+    font-size:11px; background:rgba(0,0,0,.4); color:var(--text);
+    padding:6px 10px; border-radius:99px;
+    backdrop-filter: blur(4px);
+  }
+  .card .info{
+    padding:18px 20px 22px;
+    border-top:1px solid var(--line);
+  }
+  .card .info .name-age{ font-family:var(--font-d); font-size:22px; font-weight:600; margin-bottom:2px; }
+  .card .info .place{ font-size:13px; color:var(--text-soft); margin-bottom:10px; }
+  .card .info .bio{ font-size:14px; color:var(--text); line-height:1.45; }
+
+  #swipe-actions{ display:flex; gap:22px; align-items:center; justify-content:center; padding:6px 0 18px; }
+  .act-btn{
+    width:58px; height:58px; border-radius:50%;
+    border:1px solid var(--line); background:var(--ink-2);
+    display:flex; align-items:center; justify-content:center;
+    font-size:24px; color:var(--text);
+    transition:.12s;
+  }
+  .act-btn:active{ transform:scale(.9); }
+  .act-btn.pass{ color:var(--text-soft); }
+  .act-btn.like{ background:var(--pulse); color:var(--ink); border-color:var(--pulse); width:66px; height:66px; font-size:27px; }
+
+  #empty-state{
+    display:none; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; flex:1; padding:20px;
+  }
+  #empty-state h3{ font-family:var(--font-d); font-weight:600; font-size:20px; margin:0 0 8px; }
+  #empty-state p{ color:var(--text-soft); font-size:14px; line-height:1.5; margin:0 0 20px; max-width:260px; }
+  #reset-demo{
+    background:none; border:1px solid var(--line); color:var(--text);
+    padding:11px 18px; border-radius:99px; font-size:13px; font-weight:600;
+  }
+
+  /* ---------- MATCH MODAL ---------- */
+  #match-modal{
+    position:absolute; inset:0; z-index:50;
+    background:rgba(10,11,14,.88);
+    display:none; align-items:center; justify-content:center;
+    flex-direction:column; text-align:center; padding:30px;
+    opacity:0; transition:opacity .2s ease;
+  }
+  #match-modal.show{ display:flex; opacity:1; }
+  #match-modal .mm-label{ color:var(--volt); font-family:var(--font-d); font-size:13px; letter-spacing:1px; margin-bottom:6px; }
+  #match-modal h2{ font-family:var(--font-d); font-size:32px; font-weight:600; margin:0 0 22px; }
+  .mm-avatars{ display:flex; align-items:center; gap:-10px; margin-bottom:22px; }
+  .mm-avatars .avatar{ width:74px; height:74px; font-size:26px; border:3px solid var(--ink); }
+  .mm-avatars .avatar:last-child{ margin-left:-18px; }
+  #match-modal p.mm-text{ color:var(--text-soft); font-size:14px; margin:0 0 26px; max-width:260px; }
+  .mm-btn{
+    width:100%; max-width:260px; padding:14px; border-radius:var(--radius-sm);
+    border:none; font-weight:700; font-size:15px; margin-bottom:10px;
+  }
+  .mm-btn.primary{ background:var(--volt); color:var(--ink); }
+  .mm-btn.ghost{ background:none; color:var(--text-soft); border:1px solid var(--line); }
+
+  /* ---------- MATCHES LIST ---------- */
+  #tab-matches{ padding:18px 20px; overflow-y:auto; }
+  #tab-matches h2{ font-family:var(--font-d); font-size:20px; font-weight:600; margin:0 0 14px; }
+  .match-row{
+    display:flex; align-items:center; gap:12px;
+    padding:12px 6px; border-bottom:1px solid var(--line);
+  }
+  .match-row .avatar{ width:48px; height:48px; font-size:16px; flex-shrink:0; }
+  .match-row .mr-body{ flex:1; min-width:0; }
+  .match-row .mr-name{ font-weight:600; font-size:14.5px; display:flex; align-items:center; gap:6px; }
+  .match-row .mr-last{ font-size:13px; color:var(--text-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+  .unread-dot{ width:8px; height:8px; border-radius:50%; background:var(--pulse); flex-shrink:0; }
+  #matches-empty{ text-align:center; padding:60px 20px; color:var(--text-soft); font-size:14px; line-height:1.6; }
+
+  /* ---------- CHAT VIEW (matches) ---------- */
+  #chat-view{
+    position:absolute; inset:0; z-index:40; background:var(--ink);
+    display:none; flex-direction:column;
+  }
+  #chat-view.open{ display:flex; }
+  .chat-header{
+    padding:14px 16px; display:flex; align-items:center; gap:12px;
+    border-bottom:1px solid var(--line); flex-shrink:0;
+  }
+  .back-btn{ background:none; border:none; color:var(--text); font-size:20px; padding:4px 6px 4px 0; }
+  .chat-header .ch-body{ flex:1; }
+  .chat-header .ch-name{ font-weight:600; font-size:15px; }
+  .chat-header .ch-sub{ font-size:12px; color:var(--text-soft); }
+  .menu-btn{ background:none; border:none; color:var(--text-soft); font-size:19px; letter-spacing:2px; }
+
+  .chat-scroll{ flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:10px; }
+  .bubble{ max-width:76%; padding:10px 14px; border-radius:16px; font-size:14px; line-height:1.45; }
+  .bubble.them{ align-self:flex-start; background:var(--ink-3); border-bottom-left-radius:4px; }
+  .bubble.me{ align-self:flex-end; background:var(--pulse); color:var(--ink); border-bottom-right-radius:4px; font-weight:500; }
+  .bubble.ai{ align-self:flex-start; background:var(--calm-dim); border:1px solid rgba(143,217,196,0.25); border-bottom-left-radius:4px; }
+  .bubble.meai{ align-self:flex-end; background:var(--ink-3); border-bottom-right-radius:4px; }
+  .typing{ align-self:flex-start; display:flex; gap:4px; padding:12px 14px; background:var(--ink-3); border-radius:16px; border-bottom-left-radius:4px; }
+  .typing span{ width:6px; height:6px; border-radius:50%; background:var(--text-soft); animation:tb 1.2s infinite; }
+  .typing span:nth-child(2){ animation-delay:.15s; } .typing span:nth-child(3){ animation-delay:.3s; }
+  @keyframes tb{ 0%,60%,100%{ transform:translateY(0); opacity:.4; } 30%{ transform:translateY(-4px); opacity:1; } }
+
+  .chat-input-row{ display:flex; gap:10px; padding:12px 14px; border-top:1px solid var(--line); flex-shrink:0; }
+  .chat-input-row input{
+    flex:1; background:var(--ink-2); border:1px solid var(--line); color:var(--text);
+    padding:12px 15px; border-radius:99px; font-size:14px; outline:none;
+  }
+  .chat-input-row input:focus{ border-color:var(--pulse); }
+  .send-btn{
+    width:44px; height:44px; border-radius:50%; border:none;
+    background:var(--pulse); color:var(--ink); font-size:16px; flex-shrink:0;
+  }
+  #tab-desahogo .send-btn{ background:var(--calm); }
+  #tab-desahogo .chat-input-row input:focus{ border-color:var(--calm); }
+  .send-btn:disabled{ opacity:.4; }
+
+  /* ---------- DESAHOGO ---------- */
+  .desahogo-head{ padding:16px 20px 10px; border-bottom:1px solid var(--line); }
+  .desahogo-head .dh-title{ font-family:var(--font-d); font-size:19px; font-weight:600; color:var(--calm); }
+  .desahogo-head .dh-note{ font-size:12px; color:var(--text-faint); margin-top:4px; line-height:1.5; }
+
+  /* ---------- BOTTOM NAV ---------- */
+  nav#bottom-nav{
+    display:flex; border-top:1px solid var(--line); flex-shrink:0;
+    background:var(--ink);
+  }
+  nav#bottom-nav button{
+    flex:1; background:none; border:none; padding:12px 6px 14px;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    color:var(--text-faint); font-size:11px; font-weight:600;
+  }
+  nav#bottom-nav button .ic{ font-size:19px; }
+  nav#bottom-nav button.active{ color:var(--text); }
+  nav#bottom-nav button.active .ic{ color:var(--pulse); }
+  nav#bottom-nav button[data-tab="desahogo"].active .ic{ color:var(--calm); }
+
+  @media (max-width:360px){
+    .badge-big{ width:96px; height:96px; font-size:32px; }
+  }
+</style>
+</head>
+<body>
+<div id="frame">
+
+  <!-- ONBOARDING -->
+  <div id="onboarding">
+    <div class="brand"><span class="dot"></span>FITMATCH</div>
+    <h1>Encuentra a tu <span>compañero de entreno</span>, sin salir a buscarlo.</h1>
+    <p class="sub">Conecta con gente que va al gym o que corre cerca de ti. Y cuando lo necesites, tienes un espacio aparte para desahogarte, sin juicios.</p>
+
+    <form id="onboarding-form">
+      <div class="field">
+        <label class="field-label">¿Cómo te llamas?</label>
+        <input type="text" id="name-input" placeholder="Tu nombre" required maxlength="24">
+      </div>
+
+      <div class="field">
+        <label class="field-label">¿Qué entrenas?</label>
+        <div class="type-row" id="type-row">
+          <label class="type-opt active" data-val="gym"><input type="radio" name="type" value="gym" checked>Gym</label>
+          <label class="type-opt" data-val="runner"><input type="radio" name="type" value="runner">Runner</label>
+          <label class="type-opt" data-val="ambos"><input type="radio" name="type" value="ambos">Ambos</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Foto de perfil (opcional)</label>
+        <div class="photo-row">
+          <div class="photo-preview" id="photo-preview">?</div>
+          <label class="upload-btn">Subir foto
+            <input type="file" id="photo-input" accept="image/*" style="display:none">
+          </label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Ciudad (opcional)</label>
+        <input type="text" id="city-input" placeholder="Ciudad de México" maxlength="30">
+      </div>
+
+      <button type="submit" id="start-btn" disabled>Empezar a descubrir</button>
+      <p class="fine">Los perfiles cercanos son datos de ejemplo para esta demo. El chat de Desahogo usa IA real y consume tu crédito de la API de Anthropic.</p>
+    </form>
+  </div>
+
+  <!-- APP SHELL -->
+  <div id="app-shell">
+    <header class="top">
+      <div class="who">
+        <div class="avatar" id="header-avatar" style="background:var(--pulse);color:var(--ink)">?</div>
+        <div>
+          <div class="title" id="header-title">Descubre</div>
+          <div class="sub-line" id="header-sub">Cerca de ti</div>
+        </div>
+      </div>
+      <div class="live-pill" id="live-pill"><span class="blip"></span><span id="live-count">—</span> activos</div>
+    </header>
+
+    <main>
+      <!-- DESCUBRE -->
+      <section class="tab active" id="tab-descubre">
+        <div id="card-stack"></div>
+        <div id="swipe-actions">
+          <button class="act-btn pass" id="btn-pass" aria-label="Pasar">✕</button>
+          <button class="act-btn like" id="btn-like" aria-label="Me gusta">♥</button>
+        </div>
+        <div id="empty-state">
+          <h3>Ya viste a todos por hoy</h3>
+          <p>Vuelve más tarde para ver nuevos perfiles cerca de ti, o reinicia la demo para volver a verlos.</p>
+          <button id="reset-demo">Reiniciar demo</button>
+        </div>
+      </section>
+
+      <!-- MATCHES -->
+      <section class="tab" id="tab-matches">
+        <h2>Tus matches</h2>
+        <div id="matches-list"></div>
+        <div id="matches-empty">Aún no tienes matches. Dale ♥ a alguien en Descubre para empezar a platicar.</div>
+      </section>
+
+      <!-- DESAHOGO -->
+      <section class="tab" id="tab-desahogo">
+        <div class="desahogo-head">
+          <div class="dh-title">Espacio para desahogarte</div>
+          <div class="dh-note">Una IA te acompaña y te escucha. No sustituye ayuda profesional ni es un contacto de emergencia.</div>
+        </div>
+        <div class="chat-scroll" id="desahogo-messages"></div>
+        <div class="chat-input-row">
+          <input type="text" id="desahogo-input" placeholder="Cuéntame qué traes en mente...">
+          <button class="send-btn" id="desahogo-send" aria-label="Enviar">➤</button>
+        </div>
+      </section>
+    </main>
+
+    <nav id="bottom-nav">
+      <button data-tab="descubre" class="active"><span class="ic">◎</span>Descubre</button>
+      <button data-tab="matches"><span class="ic">♥</span>Matches</button>
+      <button data-tab="desahogo"><span class="ic">◐</span>Desahogo</button>
+    </nav>
+
+    <!-- CHAT VIEW OVERLAY (para un match especifico) -->
+    <div id="chat-view">
+      <div class="chat-header">
+        <button class="back-btn" id="chat-back">←</button>
+        <div class="avatar" id="cv-avatar" style="width:40px;height:40px;font-size:14px;"></div>
+        <div class="ch-body">
+          <div class="ch-name" id="cv-name"></div>
+          <div class="ch-sub" id="cv-sub"></div>
+        </div>
+        <button class="menu-btn" id="cv-menu">⋯</button>
+      </div>
+      <div class="chat-scroll" id="cv-messages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="cv-input" placeholder="Escribe un mensaje...">
+        <button class="send-btn" id="cv-send" aria-label="Enviar">➤</button>
+      </div>
+    </div>
+
+    <!-- MATCH MODAL -->
+    <div id="match-modal">
+      <div class="mm-label">¡NUEVO MATCH!</div>
+      <h2>Es un match</h2>
+      <div class="mm-avatars">
+        <div class="avatar" id="mm-avatar-user" style="width:74px;height:74px;font-size:26px;"></div>
+        <div class="avatar" id="mm-avatar-them" style="width:74px;height:74px;font-size:26px;"></div>
+      </div>
+      <p class="mm-text" id="mm-text"></p>
+      <button class="mm-btn primary" id="mm-send">Enviar mensaje</button>
+      <button class="mm-btn ghost" id="mm-continue">Seguir viendo perfiles</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------------- DATA ----------------
+  var GYM_COLOR = "#FF5A3C";
+  var RUN_COLOR = "#D4FF3F";
+
+  var PROFILE_POOL = [
+    {id:1, name:"Regina", age:27, activity:"gym", sub:"Fuerza y funcional", place:"Entrena en Smart Fit Condesa", bio:"Buscando compañía para no cancelar el gym los lunes.", km:"0.8 km", greeting:"¡Hola! Vi que también entrenas fuerza. ¿Qué días vas al gym normalmente?"},
+    {id:2, name:"Iván", age:31, activity:"runner", sub:"10K y medios maratones", place:"Corre en el Bosque de Chapultepec", bio:"Ritmo 5:30/km, busco compañía para las salidas largas del domingo.", km:"1.2 km", greeting:"Qué onda, vi tu perfil. ¿Corres los domingos temprano o prefieres tarde?"},
+    {id:3, name:"Camila", age:24, activity:"gym", sub:"Powerlifting", place:"Entrena en Sport City Del Valle", bio:"Peso muerto es mi cardio favorito.", km:"2.1 km", greeting:"Hola! Powerlifting gang. ¿En qué levantamiento andas estancada ahorita?"},
+    {id:4, name:"Diego", age:29, activity:"runner", sub:"Trail y montaña", place:"Corre en Desierto de los Leones", bio:"Los fines de semana subo cerros, entre semana solo sobrevivo.", km:"3.4 km", greeting:"¡Match! ¿Ya has corrido trail por el Desierto de los Leones o te late probarlo?"},
+    {id:5, name:"Valentina", age:33, activity:"gym", sub:"Crossfit", place:"Entrena en un box en Polanco", bio:"El WOD de hoy me tiene sufriendo, ¿alguien más?", km:"1.6 km", greeting:"Jaja hola, ¿tú también sufres con los WODs de burpees o soy solo yo?"},
+    {id:6, name:"Santiago", age:26, activity:"runner", sub:"5K rápidos", place:"Corre en Parque México", bio:"Intento bajar de 20 minutos en el 5K, aún no lo logro.", km:"0.5 km", greeting:"Hola, veo que corres por Parque México también. ¿Sales entre semana?"},
+    {id:7, name:"Fernanda", age:30, activity:"gym", sub:"Spinning y funcional", place:"Entrena en Sports World Roma", bio:"El spinning de las 7am me cambió la vida.", km:"2.8 km", greeting:"¡Hola! ¿Vas seguido al spinning de las 7? Ahí nos vemos rodando jaja"},
+    {id:8, name:"Mateo", age:35, activity:"runner", sub:"Medio maratón", place:"Corre en Viveros de Coyoacán", bio:"Entrenando para mi tercer medio maratón, busco pace 5:00.", km:"4.0 km", greeting:"Qué tal, ando entrenando para un medio maratón. ¿Tú entrenas para alguna carrera?"},
+    {id:9, name:"Ximena", age:28, activity:"gym", sub:"Fuerza", place:"Entrena en Smart Fit Narvarte", bio:"Cada semana un PR nuevo (o eso intento).", km:"1.9 km", greeting:"Hola! ¿Cómo llevas tus PRs esta semana?"},
+    {id:10, name:"Emilio", age:32, activity:"runner", sub:"Ultra trail", place:"Corre en Ajusco", bio:"Si te gusta sufrir en las subidas, hablemos.", km:"3.7 km", greeting:"Jaja hola, ¿de verdad te gustan las subidas o nada más lo pusiste en el bio?"}
+  ];
+
+  var AUTO_REPLIES = [
+    "Jaja sí, totalmente.",
+    "¿A qué hora sueles entrenar normalmente?",
+    "Me late, ¿nos vemos esta semana?",
+    "Yo también batallo con eso, ánimo.",
+    "Cuéntame más, ¿cuánto tiempo llevas en esto?",
+    "Uy sí, se siente bien feo al principio pero mejora.",
+    "¿Prefieres entrenar solo o en grupo normalmente?",
+    "Va, te aviso qué día me late para vernos."
+  ];
+
+  // ---------------- STATE ----------------
+  var state = {
+    user: { name:"", type:"gym", photo:null, initials:"?", city:"" },
+    currentIndex: 0,
+    profiles: PROFILE_POOL.slice(),
+    matches: [],
+    desahogo: [
+      {role:"assistant", content:"Hola, este es tu espacio. Aquí puedes contarme cómo te sientes, sin filtros. ¿Qué traes en mente hoy?"}
+    ],
+    activeChatId: null,
+    liveCount: 128 + Math.floor(Math.random()*40)
+  };
+
+  var dragState = null;
+  var matchCounter = 0;
+
+  // ---------------- HELPERS ----------------
+  function $(id){ return document.getElementById(id); }
+  function initialsOf(name){
+    var parts = name.trim().split(/\s+/);
+    var out = parts[0] ? parts[0][0] : "?";
+    if(parts[1]) out += parts[1][0];
+    return out.toUpperCase();
+  }
+  function activityColor(activity){ return activity === "runner" ? RUN_COLOR : GYM_COLOR; }
+  function activityTextColor(activity){ return "#12151A"; }
+  function nowTime(){
+    var d = new Date();
+    var h = d.getHours(); var m = d.getMinutes();
+    var ampm = h >= 12 ? "p.m." : "a.m.";
+    var h12 = h % 12; if(h12 === 0) h12 = 12;
+    var mm = m < 10 ? "0"+m : ""+m;
+    return h12 + ":" + mm + " " + ampm;
+  }
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  // ---------------- ONBOARDING ----------------
+  var nameInput = $("name-input");
+  var cityInput = $("city-input");
+  var startBtn = $("start-btn");
+  var photoInput = $("photo-input");
+  var photoPreview = $("photo-preview");
+  var typeRow = $("type-row");
+
+  function refreshStartBtn(){
+    startBtn.disabled = nameInput.value.trim().length === 0;
+  }
+  nameInput.addEventListener("input", function(){
+    refreshStartBtn();
+    if(!state.user.photo){
+      photoPreview.textContent = initialsOf(nameInput.value || "?");
+    }
+  });
+
+  typeRow.addEventListener("click", function(e){
+    var opt = e.target.closest(".type-opt");
+    if(!opt) return;
+    typeRow.querySelectorAll(".type-opt").forEach(function(o){ o.classList.remove("active"); });
+    opt.classList.add("active");
+    opt.querySelector("input").checked = true;
+  });
+
+  photoInput.addEventListener("change", function(){
+    var file = photoInput.files && photoInput.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e){
+      state.user.photo = e.target.result;
+      photoPreview.innerHTML = '<img src="'+e.target.result+'" alt="Foto de perfil">';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  $("onboarding-form").addEventListener("submit", function(e){
+    e.preventDefault();
+    var name = nameInput.value.trim();
+    if(!name) return;
+    var typeVal = typeRow.querySelector('input[name="type"]:checked').value;
+    state.user.name = name;
+    state.user.type = typeVal;
+    state.user.initials = initialsOf(name);
+    state.user.city = cityInput.value.trim() || "Ciudad de México";
+    launchApp();
+  });
+
+  function launchApp(){
+    $("onboarding").style.display = "none";
+    $("app-shell").style.display = "flex";
+
+    var headerAvatar = $("header-avatar");
+    if(state.user.photo){
+      headerAvatar.innerHTML = '<img src="'+state.user.photo+'" alt="">';
+    } else {
+      headerAvatar.textContent = state.user.initials;
+      headerAvatar.style.background = "var(--pulse)";
+    }
+    $("header-sub").textContent = "Cerca de " + state.user.city;
+
+    renderStack();
+    renderMatchesList();
+    renderDesahogo();
+    startLiveCounter();
+  }
+
+  // ---------------- LIVE COUNTER (simulado) ----------------
+  function startLiveCounter(){
+    $("live-count").textContent = state.liveCount;
+    setInterval(function(){
+      var delta = Math.floor(Math.random()*7) - 3;
+      state.liveCount = Math.max(60, state.liveCount + delta);
+      $("live-count").textContent = state.liveCount;
+    }, 3500);
+  }
+
+  // ---------------- TABS ----------------
+  var TAB_TITLES = {
+    descubre: {title:"Descubre", sub:"Cerca de " },
+    matches: {title:"Tus matches", sub:"Conversaciones"},
+    desahogo: {title:"Desahogo", sub:"Solo tú y tu espacio"}
+  };
+
+  document.querySelectorAll("#bottom-nav button").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      switchTab(btn.getAttribute("data-tab"));
+    });
+  });
+
+  function switchTab(tab){
+    document.querySelectorAll("section.tab").forEach(function(s){ s.classList.remove("active"); });
+    document.querySelectorAll("#bottom-nav button").forEach(function(b){ b.classList.remove("active"); });
+    $("tab-" + tab).classList.add("active");
+    document.querySelector('#bottom-nav button[data-tab="'+tab+'"]').classList.add("active");
+    var meta = TAB_TITLES[tab];
+    $("header-title").textContent = meta.title;
+    $("header-sub").textContent = tab === "descubre" ? (meta.sub + state.user.city) : meta.sub;
+  }
+
+  // ---------------- DESCUBRE / SWIPE ----------------
+  function cardHTML(p, pos){
+    var color = activityColor(p.activity);
+    var tagLabel = p.activity === "runner" ? "RUNNER" : "GYM";
+    var cls = pos === 0 ? "card top" : "card behind";
+    return (
+      '<div class="'+cls+'" data-id="'+p.id+'">' +
+        '<div class="photo-zone">' +
+          '<div class="tag-pill" style="background:'+color+'">'+tagLabel+'</div>' +
+          '<div class="distance-pill">'+p.km+'</div>' +
+          '<div class="badge-big" style="background:'+color+';color:#12151A">'+initialsOf(p.name)+'</div>' +
+        '</div>' +
+        '<div class="info">' +
+          '<div class="name-age">'+escapeHtml(p.name)+', '+p.age+'</div>' +
+          '<div class="place">'+escapeHtml(p.place)+' · '+escapeHtml(p.sub)+'</div>' +
+          '<div class="bio">'+escapeHtml(p.bio)+'</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderStack(){
+    var stackEl = $("card-stack");
+    var remaining = state.profiles.slice(state.currentIndex, state.currentIndex + 2);
+    if(remaining.length === 0){
+      stackEl.innerHTML = "";
+      $("empty-state").style.display = "flex";
+      $("swipe-actions").style.display = "none";
+      return;
+    }
+    $("empty-state").style.display = "none";
+    $("swipe-actions").style.display = "flex";
+    var html = "";
+    for(var i = remaining.length - 1; i >= 0; i--){
+      html += cardHTML(remaining[i], i);
+    }
+    stackEl.innerHTML = html;
+    attachDrag();
+  }
+
+  function attachDrag(){
+    var top = stackTopEl();
+    if(!top) return;
+    top.addEventListener("pointerdown", onPointerDown);
+  }
+  function stackTopEl(){ return document.querySelector("#card-stack .card.top"); }
+
+  function onPointerDown(e){
+    var el = stackTopEl();
+    if(!el) return;
+    dragState = { el: el, startX: e.clientX, startY: e.clientY, dx: 0 };
+    el.setPointerCapture(e.pointerId);
+    el.addEventListener("pointermove", onPointerMove);
+    el.addEventListener("pointerup", onPointerUp);
+    el.addEventListener("pointercancel", onPointerUp);
+  }
+  function onPointerMove(e){
+    if(!dragState) return;
+    dragState.dx = e.clientX - dragState.startX;
+    var rot = dragState.dx / 18;
+    dragState.el.style.transform = "translateX("+dragState.dx+"px) rotate("+rot+"deg)";
+    dragState.el.style.transition = "none";
+  }
+  function onPointerUp(){
+    if(!dragState) return;
+    var el = dragState.el, dx = dragState.dx;
+    el.style.transition = "transform .25s ease, opacity .25s ease";
+    el.removeEventListener("pointermove", onPointerMove);
+    el.removeEventListener("pointerup", onPointerUp);
+    el.removeEventListener("pointercancel", onPointerUp);
+    if(dx > 90){
+      handleSwipe("like");
+    } else if(dx < -90){
+      handleSwipe("pass");
+    } else {
+      el.style.transform = "translateX(0) rotate(0)";
+    }
+    dragState = null;
+  }
+
+  $("btn-like").addEventListener("click", function(){ handleSwipe("like"); });
+  $("btn-pass").addEventListener("click", function(){ handleSwipe("pass"); });
+
+  function handleSwipe(direction){
+    var el = stackTopEl();
+    var profile = state.profiles[state.currentIndex];
+    if(!profile) return;
+    if(el){
+      var outX = direction === "like" ? 480 : -480;
+      var rot = direction === "like" ? 18 : -18;
+      el.style.transform = "translateX("+outX+"px) rotate("+rot+"deg)";
+      el.style.opacity = "0";
+    }
+    setTimeout(function(){
+      state.currentIndex += 1;
+      renderStack();
+    }, 230);
+
+    if(direction === "like"){
+      var isMatch = Math.random() < 0.6;
+      if(isMatch){
+        setTimeout(function(){ createMatch(profile); }, 260);
+      }
+    }
+  }
+
+  $("reset-demo").addEventListener("click", function(){
+    state.currentIndex = 0;
+    state.profiles = PROFILE_POOL.slice();
+    renderStack();
+  });
+
+  // ---------------- MATCHES ----------------
+  function createMatch(profile){
+    matchCounter += 1;
+    var match = {
+      key: "m" + matchCounter,
+      name: profile.name,
+      activity: profile.activity,
+      sub: profile.sub,
+      unread: true,
+      messages: [
+        {from:"them", text: profile.greeting, time: nowTime()}
+      ],
+      lastMsg: profile.greeting
+    };
+    state.matches.unshift(match);
+    renderMatchesList();
+    showMatchModal(match);
+  }
+
+  function showMatchModal(match){
+    var color = activityColor(match.activity);
+    var userAv = $("mm-avatar-user");
+    if(state.user.photo){ userAv.innerHTML = '<img src="'+state.user.photo+'" alt="">'; }
+    else { userAv.textContent = state.user.initials; userAv.style.background = "var(--volt)"; userAv.style.color="#12151A"; }
+    var themAv = $("mm-avatar-them");
+    themAv.textContent = initialsOf(match.name);
+    themAv.style.background = color;
+    themAv.style.color = "#12151A";
+    $("mm-text").textContent = "Tú y " + match.name + " se dieron like. ¡Ya pueden platicar!";
+    $("match-modal").classList.add("show");
+    $("match-modal").dataset.matchId = match.key;
+  }
+  $("mm-continue").addEventListener("click", function(){
+    $("match-modal").classList.remove("show");
+  });
+  $("mm-send").addEventListener("click", function(){
+    var key = $("match-modal").dataset.matchId;
+    $("match-modal").classList.remove("show");
+    switchTab("matches");
+    openChat(key);
+  });
+
+  function matchRowHTML(m){
+    var color = activityColor(m.activity);
+    return (
+      '<div class="match-row" data-id="'+m.key+'">' +
+        '<div class="avatar" style="background:'+color+';color:#12151A">'+initialsOf(m.name)+'</div>' +
+        '<div class="mr-body">' +
+          '<div class="mr-name">'+escapeHtml(m.name)+(m.unread ? ' <span class="unread-dot"></span>' : '')+'</div>' +
+          '<div class="mr-last">'+escapeHtml(m.lastMsg)+'</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderMatchesList(){
+    var list = $("matches-list");
+    var empty = $("matches-empty");
+    if(state.matches.length === 0){
+      list.innerHTML = "";
+      empty.style.display = "block";
+      return;
+    }
+    empty.style.display = "none";
+    list.innerHTML = state.matches.map(matchRowHTML).join("");
+  }
+
+  $("matches-list").addEventListener("click", function(e){
+    var row = e.target.closest(".match-row");
+    if(!row) return;
+    openChat(row.getAttribute("data-id"));
+  });
+
+  // ---------------- CHAT VIEW (matches) ----------------
+  function findMatch(id){
+    for(var i=0;i<state.matches.length;i++){ if(state.matches[i].key === id) return state.matches[i]; }
+    return null;
+  }
+
+  function openChat(id){
+    var m = findMatch(id);
+    if(!m) return;
+    state.activeChatId = id;
+    m.unread = false;
+    renderMatchesList();
+
+    var color = activityColor(m.activity);
+    var av = $("cv-avatar");
+    av.textContent = initialsOf(m.name);
+    av.style.background = color; av.style.color = "#12151A";
+    $("cv-name").textContent = m.name;
+    $("cv-sub").textContent = m.sub;
+
+    renderChatMessages(m);
+    $("chat-view").classList.add("open");
+  }
+
+  function renderChatMessages(m){
+    var box = $("cv-messages");
+    box.innerHTML = m.messages.map(function(msg){
+      var cls = msg.from === "me" ? "bubble me" : "bubble them";
+      return '<div class="'+cls+'">'+escapeHtml(msg.text)+'</div>';
+    }).join("");
+    box.scrollTop = box.scrollHeight;
+  }
+
+  $("chat-back").addEventListener("click", function(){
+    $("chat-view").classList.remove("open");
+    state.activeChatId = null;
+  });
+
+  $("cv-menu").addEventListener("click", function(){
+    var choice = window.prompt("Escribe 'bloquear' o 'reportar' (demo de las opciones de seguridad):");
+    if(!choice) return;
+    choice = choice.trim().toLowerCase();
+    if(choice === "bloquear"){
+      alert("Usuario bloqueado. Ya no podrá contactarte.");
+      $("chat-view").classList.remove("open");
+    } else if(choice === "reportar"){
+      alert("Reporte enviado. El equipo de seguridad lo revisará.");
+    }
+  });
+
+  function sendMatchMessage(){
+    var input = $("cv-input");
+    var text = input.value.trim();
+    if(!text || state.activeChatId === null) return;
+    var m = findMatch(state.activeChatId);
+    if(!m) return;
+    m.messages.push({from:"me", text:text, time: nowTime()});
+    m.lastMsg = text;
+    input.value = "";
+    renderChatMessages(m);
+    renderMatchesList();
+
+    var box = $("cv-messages");
+    var typingEl = document.createElement("div");
+    typingEl.className = "typing";
+    typingEl.innerHTML = "<span></span><span></span><span></span>";
+    box.appendChild(typingEl);
+    box.scrollTop = box.scrollHeight;
+
+    var delay = 900 + Math.random()*900;
+    setTimeout(function(){
+      typingEl.remove();
+      var reply = AUTO_REPLIES[Math.floor(Math.random()*AUTO_REPLIES.length)];
+      m.messages.push({from:"them", text:reply, time: nowTime()});
+      m.lastMsg = reply;
+      if(state.activeChatId === m.key){ renderChatMessages(m); }
+      else { m.unread = true; }
+      renderMatchesList();
+    }, delay);
+  }
+  $("cv-send").addEventListener("click", sendMatchMessage);
+  $("cv-input").addEventListener("keydown", function(e){ if(e.key === "Enter") sendMatchMessage(); });
+
+  // ---------------- DESAHOGO (IA real) ----------------
+  function desahogoBubbleHTML(msg){
+    var cls = msg.role === "user" ? "bubble meai" : "bubble ai";
+    return '<div class="'+cls+'">'+escapeHtml(msg.content)+'</div>';
+  }
+  function renderDesahogo(){
+    var box = $("desahogo-messages");
+    box.innerHTML = state.desahogo.map(desahogoBubbleHTML).join("");
+    box.scrollTop = box.scrollHeight;
+  }
+
+  var desahogoBusy = false;
+
+  async function sendToAI(){
+    // state.desahogo ya incluye el mensaje del usuario que se acaba de enviar.
+    // Se descarta el saludo inicial (role "assistant") porque la API exige que
+    // la conversación empiece con un turno "user".
+    var history = state.desahogo
+      .filter(function(m, idx){ return !(idx === 0 && m.role === "assistant"); })
+      .map(function(m){ return {role: m.role, content: m.content}; });
+
+    var response = await fetch("/.netlify/functions/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: history })
+    });
+
+    if(!response.ok){ throw new Error("API error " + response.status); }
+    var data = await response.json();
+    return data.reply || "Perdón, no logré procesar eso. ¿Puedes decirlo de otra forma?";
+  }
+
+  async function sendDesahogoMessage(){
+    if(desahogoBusy) return;
+    var input = $("desahogo-input");
+    var text = input.value.trim();
+    if(!text) return;
+    input.value = "";
+
+    state.desahogo.push({role:"user", content:text});
+    renderDesahogo();
+
+    var box = $("desahogo-messages");
+    var typingEl = document.createElement("div");
+    typingEl.className = "typing";
+    typingEl.innerHTML = "<span></span><span></span><span></span>";
+    box.appendChild(typingEl);
+    box.scrollTop = box.scrollHeight;
+
+    desahogoBusy = true;
+    $("desahogo-send").disabled = true;
+
+    try{
+      var reply = await sendToAI();
+      typingEl.remove();
+      state.desahogo.push({role:"assistant", content: reply});
+      renderDesahogo();
+    } catch(err){
+      typingEl.remove();
+      state.desahogo.push({role:"assistant", content:"Se me fue la conexión un momento. ¿Puedes intentar escribirlo de nuevo?"});
+      renderDesahogo();
+    } finally {
+      desahogoBusy = false;
+      $("desahogo-send").disabled = false;
+    }
+  }
+  $("desahogo-send").addEventListener("click", sendDesahogoMessage);
+  $("desahogo-input").addEventListener("keydown", function(e){ if(e.key === "Enter") sendDesahogoMessage(); });
+
+})();
+</script>
+</body>
+</html>
