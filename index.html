@@ -360,11 +360,17 @@
 <body>
 <div id="frame">
 
+  <!-- BOOT LOADING -->
+  <div id="boot-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;width:100%;color:var(--text-soft);font-size:14px;gap:10px;">
+    <div class="brand"><span class="dot"></span>FITMATCH</div>
+    <div>Cargando...</div>
+  </div>
+
   <!-- ONBOARDING -->
-  <div id="onboarding">
+  <div id="onboarding" style="display:none;">
     <div class="brand"><span class="dot"></span>FITMATCH</div>
     <h1>Encuentra a tu <span>compañero de entreno</span>, sin salir a buscarlo.</h1>
-    <p class="sub">Conecta con gente que va al gym o que corre cerca de ti. Y cuando lo necesites, tienes un espacio aparte para desahogarte, sin juicios.</p>
+    <p class="sub">Conecta con gente real que va al gym o que corre cerca de ti. Y cuando lo necesites, tienes un espacio aparte para desahogarte, sin juicios.</p>
 
     <form id="onboarding-form">
       <div class="field">
@@ -392,12 +398,17 @@
       </div>
 
       <div class="field">
+        <label class="field-label">Cuéntanos algo breve de ti (opcional)</label>
+        <input type="text" id="bio-input" placeholder="Ej. buscando compañía para correr los domingos" maxlength="120">
+      </div>
+
+      <div class="field">
         <label class="field-label">Ciudad (opcional)</label>
         <input type="text" id="city-input" placeholder="Ciudad de México" maxlength="30">
       </div>
 
       <button type="submit" id="start-btn" disabled>Empezar a descubrir</button>
-      <p class="fine">Los perfiles cercanos son datos de ejemplo para esta demo. El chat de Desahogo usa IA real y consume tu crédito de la API de Anthropic.</p>
+      <p class="fine" id="onboarding-fine">Al continuar, tu navegador te va a pedir permiso de ubicación para mostrarte gente cerca de ti — puedes decir que no y aun así usar la app. El chat de Desahogo usa IA real.</p>
     </form>
   </div>
 
@@ -411,7 +422,7 @@
           <div class="sub-line" id="header-sub">Cerca de ti</div>
         </div>
       </div>
-      <div class="live-pill" id="live-pill"><span class="blip"></span><span id="live-count">—</span> activos</div>
+      <div class="live-pill" id="live-pill"><span class="blip"></span><span id="live-count">—</span> registrados</div>
     </header>
 
     <main>
@@ -423,9 +434,9 @@
           <button class="act-btn like" id="btn-like" aria-label="Me gusta">♥</button>
         </div>
         <div id="empty-state">
-          <h3>Ya viste a todos por hoy</h3>
-          <p>Vuelve más tarde para ver nuevos perfiles cerca de ti, o reinicia la demo para volver a verlos.</p>
-          <button id="reset-demo">Reiniciar demo</button>
+          <h3>No hay nadie nuevo por ahora</h3>
+          <p>Ya viste a todos los perfiles disponibles cerca de ti. Invita a tus amigos a darse de alta, o busca de nuevo por si alguien se acaba de registrar.</p>
+          <button id="reset-demo">Buscar de nuevo</button>
         </div>
       </section>
 
@@ -489,81 +500,125 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 (function(){
   "use strict";
 
-  // ---------------- DATA ----------------
+  // ---------------- SUPABASE ----------------
+  var SUPABASE_URL = "https://yawgkkxlcjawbspfcpxf.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_onH4BIn88e8XIYu1k_hPhQ_jL40_fcf";
+  var sb = null;
+  var supabaseReady = false;
+  try{
+    if(window.supabase && window.supabase.createClient){
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      supabaseReady = true;
+    }
+  } catch(err){
+    console.error("No se pudo iniciar Supabase", err);
+  }
+
   var GYM_COLOR = "#FF5A3C";
   var RUN_COLOR = "#D4FF3F";
 
-  var PROFILE_POOL = [
-    {id:1, name:"Regina", age:27, activity:"gym", sub:"Fuerza y funcional", place:"Entrena en Smart Fit Condesa", bio:"Buscando compañía para no cancelar el gym los lunes.", km:"0.8 km", greeting:"¡Hola! Vi que también entrenas fuerza. ¿Qué días vas al gym normalmente?"},
-    {id:2, name:"Iván", age:31, activity:"runner", sub:"10K y medios maratones", place:"Corre en el Bosque de Chapultepec", bio:"Ritmo 5:30/km, busco compañía para las salidas largas del domingo.", km:"1.2 km", greeting:"Qué onda, vi tu perfil. ¿Corres los domingos temprano o prefieres tarde?"},
-    {id:3, name:"Camila", age:24, activity:"gym", sub:"Powerlifting", place:"Entrena en Sport City Del Valle", bio:"Peso muerto es mi cardio favorito.", km:"2.1 km", greeting:"Hola! Powerlifting gang. ¿En qué levantamiento andas estancada ahorita?"},
-    {id:4, name:"Diego", age:29, activity:"runner", sub:"Trail y montaña", place:"Corre en Desierto de los Leones", bio:"Los fines de semana subo cerros, entre semana solo sobrevivo.", km:"3.4 km", greeting:"¡Match! ¿Ya has corrido trail por el Desierto de los Leones o te late probarlo?"},
-    {id:5, name:"Valentina", age:33, activity:"gym", sub:"Crossfit", place:"Entrena en un box en Polanco", bio:"El WOD de hoy me tiene sufriendo, ¿alguien más?", km:"1.6 km", greeting:"Jaja hola, ¿tú también sufres con los WODs de burpees o soy solo yo?"},
-    {id:6, name:"Santiago", age:26, activity:"runner", sub:"5K rápidos", place:"Corre en Parque México", bio:"Intento bajar de 20 minutos en el 5K, aún no lo logro.", km:"0.5 km", greeting:"Hola, veo que corres por Parque México también. ¿Sales entre semana?"},
-    {id:7, name:"Fernanda", age:30, activity:"gym", sub:"Spinning y funcional", place:"Entrena en Sports World Roma", bio:"El spinning de las 7am me cambió la vida.", km:"2.8 km", greeting:"¡Hola! ¿Vas seguido al spinning de las 7? Ahí nos vemos rodando jaja"},
-    {id:8, name:"Mateo", age:35, activity:"runner", sub:"Medio maratón", place:"Corre en Viveros de Coyoacán", bio:"Entrenando para mi tercer medio maratón, busco pace 5:00.", km:"4.0 km", greeting:"Qué tal, ando entrenando para un medio maratón. ¿Tú entrenas para alguna carrera?"},
-    {id:9, name:"Ximena", age:28, activity:"gym", sub:"Fuerza", place:"Entrena en Smart Fit Narvarte", bio:"Cada semana un PR nuevo (o eso intento).", km:"1.9 km", greeting:"Hola! ¿Cómo llevas tus PRs esta semana?"},
-    {id:10, name:"Emilio", age:32, activity:"runner", sub:"Ultra trail", place:"Corre en Ajusco", bio:"Si te gusta sufrir en las subidas, hablemos.", km:"3.7 km", greeting:"Jaja hola, ¿de verdad te gustan las subidas o nada más lo pusiste en el bio?"}
-  ];
-
-  var AUTO_REPLIES = [
-    "Jaja sí, totalmente.",
-    "¿A qué hora sueles entrenar normalmente?",
-    "Me late, ¿nos vemos esta semana?",
-    "Yo también batallo con eso, ánimo.",
-    "Cuéntame más, ¿cuánto tiempo llevas en esto?",
-    "Uy sí, se siente bien feo al principio pero mejora.",
-    "¿Prefieres entrenar solo o en grupo normalmente?",
-    "Va, te aviso qué día me late para vernos."
-  ];
-
   // ---------------- STATE ----------------
   var state = {
-    user: { name:"", type:"gym", photo:null, initials:"?", city:"" },
-    currentIndex: 0,
-    profiles: PROFILE_POOL.slice(),
+    deviceId: null,
+    me: null,
+    pendingPhoto: null,
+    discoverQueue: [],
+    discoverIndex: 0,
     matches: [],
+    activeChatId: null,
     desahogo: [
       {role:"assistant", content:"Hola, este es tu espacio. Aquí puedes contarme cómo te sientes, sin filtros. ¿Qué traes en mente hoy?"}
-    ],
-    activeChatId: null,
-    liveCount: 128 + Math.floor(Math.random()*40)
+    ]
   };
 
   var dragState = null;
-  var matchCounter = 0;
+  var openedMatchIds = {};
+  var messageChannels = {};
 
   // ---------------- HELPERS ----------------
   function $(id){ return document.getElementById(id); }
   function initialsOf(name){
-    var parts = name.trim().split(/\s+/);
+    var parts = String(name || "?").trim().split(/\s+/);
     var out = parts[0] ? parts[0][0] : "?";
     if(parts[1]) out += parts[1][0];
     return out.toUpperCase();
   }
   function activityColor(activity){ return activity === "runner" ? RUN_COLOR : GYM_COLOR; }
-  function activityTextColor(activity){ return "#12151A"; }
-  function nowTime(){
-    var d = new Date();
-    var h = d.getHours(); var m = d.getMinutes();
-    var ampm = h >= 12 ? "p.m." : "a.m.";
-    var h12 = h % 12; if(h12 === 0) h12 = 12;
-    var mm = m < 10 ? "0"+m : ""+m;
-    return h12 + ":" + mm + " " + ampm;
-  }
   function escapeHtml(str){
     return String(str).replace(/[&<>"']/g, function(c){
       return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
     });
   }
+  function getDeviceId(){
+    var key = "fitmatch_device_id";
+    var id = localStorage.getItem(key);
+    if(!id){
+      id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ("dev-" + Date.now() + "-" + Math.random().toString(16).slice(2));
+      localStorage.setItem(key, id);
+    }
+    return id;
+  }
+  function haversineKm(lat1, lng1, lat2, lng2){
+    function toRad(deg){ return deg * Math.PI / 180; }
+    var R = 6371;
+    var dLat = toRad(lat2 - lat1);
+    var dLng = toRad(lng2 - lng1);
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+  function requestLocation(){
+    return new Promise(function(resolve){
+      if(!navigator.geolocation){ resolve(null); return; }
+      navigator.geolocation.getCurrentPosition(
+        function(pos){ resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
+        function(){ resolve(null); },
+        { timeout: 8000 }
+      );
+    });
+  }
+  function avatarInnerHTML(profile){
+    return profile.photo ? '<img src="'+profile.photo+'" alt="">' : initialsOf(profile.name);
+  }
+
+  // ---------------- BOOT ----------------
+  async function boot(){
+    state.deviceId = getDeviceId();
+
+    if(!supabaseReady){
+      $("boot-loading").innerHTML = '<div class="brand"><span class="dot"></span>FITMATCH</div><div style="max-width:260px;text-align:center;">No se pudo cargar la conexión con la base de datos. Revisa tu internet y recarga la página.</div>';
+      return;
+    }
+
+    try{
+      var res = await sb.from("profiles").select("*").eq("device_id", state.deviceId).maybeSingle();
+      if(res.error) throw res.error;
+      if(res.data){
+        state.me = res.data;
+        $("boot-loading").style.display = "none";
+        launchApp();
+        return;
+      }
+    } catch(err){
+      console.error("Error verificando perfil existente", err);
+      // seguimos hacia onboarding aunque falle la verificación
+    }
+
+    $("boot-loading").style.display = "none";
+    $("onboarding").style.display = "flex";
+  }
 
   // ---------------- ONBOARDING ----------------
   var nameInput = $("name-input");
   var cityInput = $("city-input");
+  var bioInput = $("bio-input");
   var startBtn = $("start-btn");
   var photoInput = $("photo-input");
   var photoPreview = $("photo-preview");
@@ -574,7 +629,7 @@
   }
   nameInput.addEventListener("input", function(){
     refreshStartBtn();
-    if(!state.user.photo){
+    if(!state.pendingPhoto){
       photoPreview.textContent = initialsOf(nameInput.value || "?");
     }
   });
@@ -592,22 +647,47 @@
     if(!file) return;
     var reader = new FileReader();
     reader.onload = function(e){
-      state.user.photo = e.target.result;
+      state.pendingPhoto = e.target.result;
       photoPreview.innerHTML = '<img src="'+e.target.result+'" alt="Foto de perfil">';
     };
     reader.readAsDataURL(file);
   });
 
-  $("onboarding-form").addEventListener("submit", function(e){
+  $("onboarding-form").addEventListener("submit", async function(e){
     e.preventDefault();
     var name = nameInput.value.trim();
     if(!name) return;
     var typeVal = typeRow.querySelector('input[name="type"]:checked').value;
-    state.user.name = name;
-    state.user.type = typeVal;
-    state.user.initials = initialsOf(name);
-    state.user.city = cityInput.value.trim() || "Ciudad de México";
-    launchApp();
+    var city = cityInput.value.trim() || "Ciudad de México";
+    var bio = bioInput.value.trim();
+
+    startBtn.disabled = true;
+    startBtn.textContent = "Pidiendo tu ubicación...";
+    var coords = await requestLocation();
+
+    startBtn.textContent = "Creando tu perfil...";
+    var payload = {
+      device_id: state.deviceId,
+      name: name,
+      activity: typeVal,
+      bio: bio || null,
+      photo: state.pendingPhoto || null,
+      city: city,
+      lat: coords ? coords.lat : null,
+      lng: coords ? coords.lng : null
+    };
+
+    try{
+      var res = await sb.from("profiles").insert(payload).select().single();
+      if(res.error) throw res.error;
+      state.me = res.data;
+      launchApp();
+    } catch(err){
+      console.error("Error creando perfil", err);
+      alert("No se pudo crear tu perfil. Revisa tu conexión e intenta de nuevo.");
+      startBtn.disabled = false;
+      startBtn.textContent = "Empezar a descubrir";
+    }
   });
 
   function launchApp(){
@@ -615,33 +695,32 @@
     $("app-shell").style.display = "flex";
 
     var headerAvatar = $("header-avatar");
-    if(state.user.photo){
-      headerAvatar.innerHTML = '<img src="'+state.user.photo+'" alt="">';
+    if(state.me.photo){
+      headerAvatar.innerHTML = '<img src="'+state.me.photo+'" alt="">';
     } else {
-      headerAvatar.textContent = state.user.initials;
+      headerAvatar.textContent = initialsOf(state.me.name);
       headerAvatar.style.background = "var(--pulse)";
     }
-    $("header-sub").textContent = "Cerca de " + state.user.city;
+    $("header-sub").textContent = "Cerca de " + (state.me.city || "ti");
 
-    renderStack();
-    renderMatchesList();
+    loadUserCount();
+    fetchDiscoverQueue();
     renderDesahogo();
-    startLiveCounter();
   }
 
-  // ---------------- LIVE COUNTER (simulado) ----------------
-  function startLiveCounter(){
-    $("live-count").textContent = state.liveCount;
-    setInterval(function(){
-      var delta = Math.floor(Math.random()*7) - 3;
-      state.liveCount = Math.max(60, state.liveCount + delta);
-      $("live-count").textContent = state.liveCount;
-    }, 3500);
+  // ---------------- CONTADOR DE REGISTROS ----------------
+  async function loadUserCount(){
+    try{
+      var res = await sb.from("profiles").select("*", { count: "exact", head: true });
+      $("live-count").textContent = (res.count != null ? res.count : "—");
+    } catch(err){
+      $("live-count").textContent = "—";
+    }
   }
 
   // ---------------- TABS ----------------
   var TAB_TITLES = {
-    descubre: {title:"Descubre", sub:"Cerca de " },
+    descubre: {title:"Descubre", sub:"Cerca de "},
     matches: {title:"Tus matches", sub:"Conversaciones"},
     desahogo: {title:"Desahogo", sub:"Solo tú y tu espacio"}
   };
@@ -659,25 +738,31 @@
     document.querySelector('#bottom-nav button[data-tab="'+tab+'"]').classList.add("active");
     var meta = TAB_TITLES[tab];
     $("header-title").textContent = meta.title;
-    $("header-sub").textContent = tab === "descubre" ? (meta.sub + state.user.city) : meta.sub;
+    $("header-sub").textContent = tab === "descubre" ? (meta.sub + (state.me.city || "ti")) : meta.sub;
+
+    if(tab === "matches"){ fetchMatches(); }
   }
 
   // ---------------- DESCUBRE / SWIPE ----------------
   function cardHTML(p, pos){
     var color = activityColor(p.activity);
-    var tagLabel = p.activity === "runner" ? "RUNNER" : "GYM";
+    var tagLabel = p.activity === "runner" ? "RUNNER" : (p.activity === "ambos" ? "GYM + RUNNER" : "GYM");
     var cls = pos === 0 ? "card top" : "card behind";
+    var distanceLabel = (typeof p.distanceKm === "number") ? (p.distanceKm < 1 ? "< 1 km" : Math.round(p.distanceKm) + " km") : "Cerca de ti";
+    var bioText = p.bio ? p.bio : "Todavía no escribió nada en su perfil.";
     return (
       '<div class="'+cls+'" data-id="'+p.id+'">' +
         '<div class="photo-zone">' +
           '<div class="tag-pill" style="background:'+color+'">'+tagLabel+'</div>' +
-          '<div class="distance-pill">'+p.km+'</div>' +
-          '<div class="badge-big" style="background:'+color+';color:#12151A">'+initialsOf(p.name)+'</div>' +
+          '<div class="distance-pill">'+distanceLabel+'</div>' +
+          (p.photo
+            ? '<div class="badge-big" style="background:'+color+';overflow:hidden;padding:0;"><img src="'+p.photo+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"></div>'
+            : '<div class="badge-big" style="background:'+color+';color:#12151A">'+initialsOf(p.name)+'</div>') +
         '</div>' +
         '<div class="info">' +
-          '<div class="name-age">'+escapeHtml(p.name)+', '+p.age+'</div>' +
-          '<div class="place">'+escapeHtml(p.place)+' · '+escapeHtml(p.sub)+'</div>' +
-          '<div class="bio">'+escapeHtml(p.bio)+'</div>' +
+          '<div class="name-age">'+escapeHtml(p.name)+'</div>' +
+          '<div class="place">'+escapeHtml(p.city || "")+'</div>' +
+          '<div class="bio">'+escapeHtml(bioText)+'</div>' +
         '</div>' +
       '</div>'
     );
@@ -685,7 +770,7 @@
 
   function renderStack(){
     var stackEl = $("card-stack");
-    var remaining = state.profiles.slice(state.currentIndex, state.currentIndex + 2);
+    var remaining = state.discoverQueue.slice(state.discoverIndex, state.discoverIndex + 2);
     if(remaining.length === 0){
       stackEl.innerHTML = "";
       $("empty-state").style.display = "flex";
@@ -700,6 +785,54 @@
     }
     stackEl.innerHTML = html;
     attachDrag();
+  }
+
+  function showDiscoverMessage(text){
+    var stackEl = $("card-stack");
+    $("swipe-actions").style.display = "none";
+    $("empty-state").style.display = "none";
+    stackEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-soft);font-size:14px;text-align:center;padding:20px;">'+text+'</div>';
+  }
+
+  async function fetchDiscoverQueue(){
+    showDiscoverMessage("Buscando gente cerca de ti...");
+    try{
+      var swRes = await sb.from("swipes").select("target_id").eq("swiper_id", state.me.id);
+      if(swRes.error) throw swRes.error;
+      var excludeIds = (swRes.data || []).map(function(s){ return s.target_id; });
+      excludeIds.push(state.me.id);
+
+      var query = sb.from("profiles").select("*").order("created_at", { ascending: false }).limit(50);
+      query = query.not("id", "in", "(" + excludeIds.join(",") + ")");
+      var candRes = await query;
+      if(candRes.error) throw candRes.error;
+
+      var withDistance = (candRes.data || []).map(function(p){
+        var distanceKm = null;
+        if(state.me.lat != null && state.me.lng != null && p.lat != null && p.lng != null){
+          distanceKm = haversineKm(state.me.lat, state.me.lng, p.lat, p.lng);
+        }
+        var copy = {};
+        for(var k in p){ copy[k] = p[k]; }
+        copy.distanceKm = distanceKm;
+        return copy;
+      });
+
+      withDistance.sort(function(a, b){
+        if(a.distanceKm == null && b.distanceKm == null) return 0;
+        if(a.distanceKm == null) return 1;
+        if(b.distanceKm == null) return -1;
+        return a.distanceKm - b.distanceKm;
+      });
+
+      state.discoverQueue = withDistance;
+      state.discoverIndex = 0;
+      renderStack();
+    } catch(err){
+      console.error("Error cargando perfiles cercanos", err);
+      showDiscoverMessage("No se pudo cargar. Revisa tu conexión y dale a 'Buscar de nuevo'.");
+      $("empty-state").style.display = "flex";
+    }
   }
 
   function attachDrag(){
@@ -745,85 +878,91 @@
   $("btn-like").addEventListener("click", function(){ handleSwipe("like"); });
   $("btn-pass").addEventListener("click", function(){ handleSwipe("pass"); });
 
-  function handleSwipe(direction){
-    var el = stackTopEl();
-    var profile = state.profiles[state.currentIndex];
+  async function handleSwipe(direction){
+    var profile = state.discoverQueue[state.discoverIndex];
     if(!profile) return;
+    var el = stackTopEl();
     if(el){
       var outX = direction === "like" ? 480 : -480;
       var rot = direction === "like" ? 18 : -18;
       el.style.transform = "translateX("+outX+"px) rotate("+rot+"deg)";
       el.style.opacity = "0";
     }
-    setTimeout(function(){
-      state.currentIndex += 1;
-      renderStack();
-    }, 230);
+    state.discoverIndex += 1;
+    setTimeout(function(){ renderStack(); }, 230);
 
-    if(direction === "like"){
-      var isMatch = Math.random() < 0.6;
-      if(isMatch){
-        setTimeout(function(){ createMatch(profile); }, 260);
+    try{
+      var swipeRes = await sb.from("swipes").upsert(
+        { swiper_id: state.me.id, target_id: profile.id, direction: direction },
+        { onConflict: "swiper_id,target_id" }
+      );
+      if(swipeRes.error) throw swipeRes.error;
+
+      if(direction === "like"){
+        var a = state.me.id < profile.id ? state.me.id : profile.id;
+        var b = state.me.id < profile.id ? profile.id : state.me.id;
+        var matchRes = await sb.from("matches").select("*").eq("user_a", a).eq("user_b", b).maybeSingle();
+        if(!matchRes.error && matchRes.data){
+          handleNewMatch(profile, matchRes.data);
+        }
       }
+    } catch(err){
+      console.error("Error registrando swipe", err);
     }
   }
 
   $("reset-demo").addEventListener("click", function(){
-    state.currentIndex = 0;
-    state.profiles = PROFILE_POOL.slice();
-    renderStack();
+    fetchDiscoverQueue();
   });
 
   // ---------------- MATCHES ----------------
-  function createMatch(profile){
-    matchCounter += 1;
-    var match = {
-      key: "m" + matchCounter,
-      name: profile.name,
-      activity: profile.activity,
-      sub: profile.sub,
-      unread: true,
-      messages: [
-        {from:"them", text: profile.greeting, time: nowTime()}
-      ],
-      lastMsg: profile.greeting
-    };
-    state.matches.unshift(match);
-    renderMatchesList();
-    showMatchModal(match);
+  function handleNewMatch(profile, matchRow){
+    var exists = state.matches.some(function(m){ return m.id === matchRow.id; });
+    if(!exists){
+      state.matches.unshift({
+        id: matchRow.id,
+        other: profile,
+        lastMessage: null,
+        lastMessageAt: matchRow.created_at
+      });
+      renderMatchesList();
+      subscribeToMatchMessages(matchRow.id);
+    }
+    showMatchModal(profile, matchRow.id);
   }
 
-  function showMatchModal(match){
-    var color = activityColor(match.activity);
+  function showMatchModal(profile, matchId){
+    var color = activityColor(profile.activity);
     var userAv = $("mm-avatar-user");
-    if(state.user.photo){ userAv.innerHTML = '<img src="'+state.user.photo+'" alt="">'; }
-    else { userAv.textContent = state.user.initials; userAv.style.background = "var(--volt)"; userAv.style.color="#12151A"; }
+    if(state.me.photo){ userAv.innerHTML = '<img src="'+state.me.photo+'" alt="">'; }
+    else { userAv.textContent = initialsOf(state.me.name); userAv.style.background = "var(--volt)"; userAv.style.color = "#12151A"; }
     var themAv = $("mm-avatar-them");
-    themAv.textContent = initialsOf(match.name);
-    themAv.style.background = color;
-    themAv.style.color = "#12151A";
-    $("mm-text").textContent = "Tú y " + match.name + " se dieron like. ¡Ya pueden platicar!";
+    if(profile.photo){ themAv.innerHTML = '<img src="'+profile.photo+'" alt="">'; }
+    else { themAv.textContent = initialsOf(profile.name); themAv.style.background = color; themAv.style.color = "#12151A"; }
+    $("mm-text").textContent = "Tú y " + profile.name + " se dieron like. ¡Ya pueden platicar!";
     $("match-modal").classList.add("show");
-    $("match-modal").dataset.matchId = match.key;
+    $("match-modal").dataset.matchId = matchId;
   }
   $("mm-continue").addEventListener("click", function(){
     $("match-modal").classList.remove("show");
   });
   $("mm-send").addEventListener("click", function(){
-    var key = $("match-modal").dataset.matchId;
+    var id = $("match-modal").dataset.matchId;
     $("match-modal").classList.remove("show");
     switchTab("matches");
-    openChat(key);
+    openChat(id);
   });
 
   function matchRowHTML(m){
-    var color = activityColor(m.activity);
+    var color = activityColor(m.other.activity);
+    var isUnread = !!m.lastMessage && !openedMatchIds[m.id];
+    var preview = m.lastMessage ? m.lastMessage : "¡Nuevo match! Manda el primer mensaje.";
     return (
-      '<div class="match-row" data-id="'+m.key+'">' +
-        '<div class="avatar" style="background:'+color+';color:#12151A">'+initialsOf(m.name)+'</div>' +
+      '<div class="match-row" data-id="'+m.id+'">' +
+        '<div class="avatar" style="background:'+color+';color:#12151A">'+avatarInnerHTML(m.other)+'</div>' +
         '<div class="mr-body">' +
-          '<div class="mr-name">'+escapeHtml(m.name)+(m.unread ? ' <span class="unread-dot"></span>' : '')+'</div>' +
-          '<div class="mr-last">'+escapeHtml(m.lastMsg)+'</div>' +
+          '<div class="mr-name">'+escapeHtml(m.other.name)+(isUnread ? ' <span class="unread-dot"></span>' : '')+'</div>' +
+          '<div class="mr-last">'+escapeHtml(preview)+'</div>' +
         '</div>' +
       '</div>'
     );
@@ -841,43 +980,137 @@
     list.innerHTML = state.matches.map(matchRowHTML).join("");
   }
 
+  async function fetchMatches(){
+    try{
+      var rowsRes = await sb.from("matches").select("*")
+        .or("user_a.eq." + state.me.id + ",user_b.eq." + state.me.id)
+        .order("created_at", { ascending: false });
+      if(rowsRes.error) throw rowsRes.error;
+      var rows = rowsRes.data || [];
+
+      var otherIds = rows.map(function(r){ return r.user_a === state.me.id ? r.user_b : r.user_a; });
+      var profilesById = {};
+      if(otherIds.length){
+        var othersRes = await sb.from("profiles").select("*").in("id", otherIds);
+        (othersRes.data || []).forEach(function(p){ profilesById[p.id] = p; });
+      }
+
+      var matchIds = rows.map(function(r){ return r.id; });
+      var lastMsgByMatch = {};
+      if(matchIds.length){
+        var msgsRes = await sb.from("messages").select("*").in("match_id", matchIds).order("created_at", { ascending: true });
+        (msgsRes.data || []).forEach(function(m){ lastMsgByMatch[m.match_id] = m; });
+      }
+
+      state.matches = rows.map(function(r){
+        var otherId = r.user_a === state.me.id ? r.user_b : r.user_a;
+        var lm = lastMsgByMatch[r.id];
+        return {
+          id: r.id,
+          other: profilesById[otherId] || { name: "Usuario", activity: "gym" },
+          lastMessage: lm ? lm.content : null,
+          lastMessageAt: lm ? lm.created_at : r.created_at
+        };
+      });
+
+      renderMatchesList();
+      rows.forEach(function(r){ subscribeToMatchMessages(r.id); });
+    } catch(err){
+      console.error("Error cargando matches", err);
+    }
+  }
+
   $("matches-list").addEventListener("click", function(e){
     var row = e.target.closest(".match-row");
     if(!row) return;
     openChat(row.getAttribute("data-id"));
   });
 
-  // ---------------- CHAT VIEW (matches) ----------------
+  // ---------------- CHAT VIEW (matches, mensajes reales) ----------------
   function findMatch(id){
-    for(var i=0;i<state.matches.length;i++){ if(state.matches[i].key === id) return state.matches[i]; }
+    for(var i = 0; i < state.matches.length; i++){ if(state.matches[i].id === id) return state.matches[i]; }
     return null;
   }
 
-  function openChat(id){
+  async function openChat(id){
     var m = findMatch(id);
     if(!m) return;
     state.activeChatId = id;
-    m.unread = false;
+    openedMatchIds[id] = true;
     renderMatchesList();
 
-    var color = activityColor(m.activity);
+    var color = activityColor(m.other.activity);
     var av = $("cv-avatar");
-    av.textContent = initialsOf(m.name);
-    av.style.background = color; av.style.color = "#12151A";
-    $("cv-name").textContent = m.name;
-    $("cv-sub").textContent = m.sub;
+    av.innerHTML = "";
+    if(m.other.photo){ av.innerHTML = '<img src="'+m.other.photo+'" alt="">'; }
+    else { av.textContent = initialsOf(m.other.name); av.style.background = color; av.style.color = "#12151A"; }
+    $("cv-name").textContent = m.other.name;
+    $("cv-sub").textContent = m.other.city || "";
 
-    renderChatMessages(m);
+    $("cv-messages").innerHTML = '<div style="text-align:center;color:var(--text-faint);font-size:13px;padding:20px;">Cargando mensajes...</div>';
     $("chat-view").classList.add("open");
+
+    try{
+      var msgsRes = await sb.from("messages").select("*").eq("match_id", id).order("created_at", { ascending: true });
+      if(msgsRes.error) throw msgsRes.error;
+      renderChatMessages(msgsRes.data || []);
+      subscribeToMatchMessages(id);
+    } catch(err){
+      console.error("Error cargando mensajes", err);
+      $("cv-messages").innerHTML = '<div style="text-align:center;color:var(--text-faint);font-size:13px;padding:20px;">No se pudieron cargar los mensajes.</div>';
+    }
   }
 
-  function renderChatMessages(m){
+  function renderChatMessages(msgs){
     var box = $("cv-messages");
-    box.innerHTML = m.messages.map(function(msg){
-      var cls = msg.from === "me" ? "bubble me" : "bubble them";
-      return '<div class="'+cls+'">'+escapeHtml(msg.text)+'</div>';
+    box.innerHTML = msgs.map(function(msg){
+      var cls = msg.sender_id === state.me.id ? "bubble me" : "bubble them";
+      return '<div class="'+cls+'">'+escapeHtml(msg.content)+'</div>';
     }).join("");
     box.scrollTop = box.scrollHeight;
+  }
+
+  function appendMessageToChatView(msg){
+    if(state.activeChatId !== msg.match_id) return;
+    var box = $("cv-messages");
+    var cls = msg.sender_id === state.me.id ? "bubble me" : "bubble them";
+    var div = document.createElement("div");
+    div.className = cls;
+    div.textContent = msg.content;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function subscribeToMatchMessages(matchId){
+    if(messageChannels[matchId]) return;
+    try{
+      var channel = sb.channel("messages-" + matchId)
+        .on("postgres_changes", {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: "match_id=eq." + matchId
+        }, function(payload){
+          handleIncomingMessage(matchId, payload.new);
+        })
+        .subscribe();
+      messageChannels[matchId] = channel;
+    } catch(err){
+      console.error("No se pudo suscribir a mensajes en vivo", err);
+    }
+  }
+
+  function handleIncomingMessage(matchId, msg){
+    var m = findMatch(matchId);
+    if(m){
+      m.lastMessage = msg.content;
+      m.lastMessageAt = msg.created_at;
+      if(msg.sender_id !== state.me.id){ openedMatchIds[matchId] = (state.activeChatId === matchId); }
+    }
+    if(state.activeChatId === matchId && msg.sender_id !== state.me.id){
+      appendMessageToChatView(msg);
+    }
+    renderMatchesList();
   }
 
   $("chat-back").addEventListener("click", function(){
@@ -897,38 +1130,32 @@
     }
   });
 
-  function sendMatchMessage(){
+  async function sendMatchMessage(){
     var input = $("cv-input");
     var text = input.value.trim();
     if(!text || state.activeChatId === null) return;
-    var m = findMatch(state.activeChatId);
-    if(!m) return;
-    m.messages.push({from:"me", text:text, time: nowTime()});
-    m.lastMsg = text;
     input.value = "";
-    renderChatMessages(m);
-    renderMatchesList();
 
-    var box = $("cv-messages");
-    var typingEl = document.createElement("div");
-    typingEl.className = "typing";
-    typingEl.innerHTML = "<span></span><span></span><span></span>";
-    box.appendChild(typingEl);
-    box.scrollTop = box.scrollHeight;
+    var optimisticMsg = {
+      match_id: state.activeChatId,
+      sender_id: state.me.id,
+      content: text
+    };
+    appendMessageToChatView(optimisticMsg);
 
-    var delay = 900 + Math.random()*900;
-    setTimeout(function(){
-      typingEl.remove();
-      var reply = AUTO_REPLIES[Math.floor(Math.random()*AUTO_REPLIES.length)];
-      m.messages.push({from:"them", text:reply, time: nowTime()});
-      m.lastMsg = reply;
-      if(state.activeChatId === m.key){ renderChatMessages(m); }
-      else { m.unread = true; }
-      renderMatchesList();
-    }, delay);
+    var m = findMatch(state.activeChatId);
+    if(m){ m.lastMessage = text; m.lastMessageAt = new Date().toISOString(); renderMatchesList(); }
+
+    try{
+      var res = await sb.from("messages").insert(optimisticMsg);
+      if(res.error) throw res.error;
+    } catch(err){
+      console.error("No se pudo enviar el mensaje", err);
+    }
   }
   $("cv-send").addEventListener("click", sendMatchMessage);
   $("cv-input").addEventListener("keydown", function(e){ if(e.key === "Enter") sendMatchMessage(); });
+
 
   // ---------------- DESAHOGO (IA real) ----------------
   function desahogoBubbleHTML(msg){
@@ -998,6 +1225,9 @@
   }
   $("desahogo-send").addEventListener("click", sendDesahogoMessage);
   $("desahogo-input").addEventListener("keydown", function(e){ if(e.key === "Enter") sendDesahogoMessage(); });
+
+  // ---------------- ARRANQUE ----------------
+  boot();
 
 })();
 </script>
