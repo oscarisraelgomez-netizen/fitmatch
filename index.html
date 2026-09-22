@@ -277,6 +277,38 @@
   .mm-btn.primary{ background:var(--volt); color:var(--ink); }
   .mm-btn.ghost{ background:none; color:var(--text-soft); border:1px solid var(--line); }
 
+  /* ---------- MODAL GENÉRICO (menú de cuenta, editar perfil) ---------- */
+  .modal-overlay{
+    position:absolute; inset:0; z-index:60;
+    background:rgba(10,11,14,.88);
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal-sheet{
+    background:var(--ink-2); width:100%; max-width:430px;
+    border-radius:24px 24px 0 0; padding:24px 22px 30px;
+    max-height:85vh; overflow-y:auto;
+  }
+  .modal-sheet h3{ font-family:var(--font-d); font-size:20px; font-weight:600; margin:0 0 18px; }
+  .menu-item{
+    width:100%; text-align:left; padding:14px 16px; margin-bottom:10px;
+    border-radius:var(--radius-sm); border:1px solid var(--line); background:var(--ink-3);
+    color:var(--text); font-size:15px; font-weight:600;
+  }
+  .menu-item.danger{ color:var(--pulse); border-color:var(--pulse-dim); }
+
+  /* ---------- MAPA DE GIMNASIOS ---------- */
+  #tab-mapa{ display:none; }
+  #tab-mapa.active{ display:flex; }
+  #gyms-map{ flex:1; width:100%; }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip{ background:var(--ink-2); color:var(--text); }
+
+  /* ---------- UBICACIÓN COMPARTIDA EN CHAT ---------- */
+  #cv-location-bar{ padding:10px 16px; border-top:1px solid var(--line); font-size:13px; color:var(--text-soft); flex-shrink:0; }
+  #cv-location-bar button{ width:100%; }
+  #cv-shared-map{ display:none; height:180px; width:100%; flex-shrink:0; }
+
+
   /* ---------- MATCHES LIST ---------- */
   #tab-matches{ padding:18px 20px; overflow-y:auto; }
   #tab-matches h2{ font-family:var(--font-d); font-size:20px; font-weight:600; margin:0 0 14px; }
@@ -356,6 +388,7 @@
     .badge-big{ width:96px; height:96px; font-size:32px; }
   }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 </head>
 <body>
 <div id="frame">
@@ -459,11 +492,21 @@
           <button class="send-btn" id="desahogo-send" aria-label="Enviar">➤</button>
         </div>
       </section>
+
+      <!-- MAPA DE GIMNASIOS -->
+      <section class="tab" id="tab-mapa">
+        <div class="desahogo-head">
+          <div class="dh-title" style="color:var(--pulse)">Gimnasios en CDMX</div>
+          <div class="dh-note">Referencia de gimnasios reales. Útil para proponerle a tu match dónde entrenar.</div>
+        </div>
+        <div id="gyms-map"></div>
+      </section>
     </main>
 
     <nav id="bottom-nav">
       <button data-tab="descubre" class="active"><span class="ic">◎</span>Descubre</button>
       <button data-tab="matches"><span class="ic">♥</span>Matches</button>
+      <button data-tab="mapa"><span class="ic">📍</span>Mapa</button>
       <button data-tab="desahogo"><span class="ic">◐</span>Desahogo</button>
     </nav>
 
@@ -479,6 +522,8 @@
         <button class="menu-btn" id="cv-menu">⋯</button>
       </div>
       <div class="chat-scroll" id="cv-messages"></div>
+      <div id="cv-location-bar"></div>
+      <div id="cv-shared-map"></div>
       <div class="chat-input-row">
         <input type="text" id="cv-input" placeholder="Escribe un mensaje...">
         <button class="send-btn" id="cv-send" aria-label="Enviar">➤</button>
@@ -497,13 +542,71 @@
       <button class="mm-btn primary" id="mm-send">Enviar mensaje</button>
       <button class="mm-btn ghost" id="mm-continue">Seguir viendo perfiles</button>
     </div>
+
+    <!-- MENÚ DE CUENTA -->
+    <div id="account-menu" class="modal-overlay">
+      <div class="modal-sheet">
+        <h3>Tu cuenta</h3>
+        <button id="am-edit" class="menu-item">Editar perfil</button>
+        <button id="am-delete" class="menu-item danger">Eliminar cuenta</button>
+        <button id="am-close" class="mm-btn ghost" style="width:100%;">Cerrar</button>
+      </div>
+    </div>
+
+    <!-- EDITAR PERFIL -->
+    <div id="edit-modal" class="modal-overlay">
+      <div class="modal-sheet">
+        <h3>Editar perfil</h3>
+        <div class="field">
+          <label class="field-label">Nombre</label>
+          <input type="text" id="edit-name-input" maxlength="24">
+        </div>
+        <div class="field">
+          <label class="field-label">¿Qué entrenas?</label>
+          <div class="type-row" id="edit-type-row">
+            <label class="type-opt" data-val="gym"><input type="radio" name="edit-type" value="gym">Gym</label>
+            <label class="type-opt" data-val="runner"><input type="radio" name="edit-type" value="runner">Runner</label>
+            <label class="type-opt" data-val="ambos"><input type="radio" name="edit-type" value="ambos">Ambos</label>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Foto</label>
+          <div class="photo-row">
+            <div class="photo-preview" id="edit-photo-preview">?</div>
+            <label class="upload-btn">Cambiar foto
+              <input type="file" id="edit-photo-input" accept="image/*" style="display:none">
+            </label>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Cuéntanos algo breve de ti</label>
+          <input type="text" id="edit-bio-input" maxlength="120">
+        </div>
+        <div class="field">
+          <label class="field-label">Ciudad</label>
+          <input type="text" id="edit-city-input" maxlength="30">
+        </div>
+        <button id="edit-save-btn" class="mm-btn primary" style="width:100%;">Guardar cambios</button>
+        <button id="edit-cancel-btn" class="mm-btn ghost" style="width:100%;">Cancelar</button>
+      </div>
+    </div>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 (function(){
   "use strict";
+
+  window.addEventListener("error", function(e){
+    var el = document.getElementById("boot-loading");
+    if(el && el.style.display !== "none"){
+      el.innerHTML = '<div class="brand"><span class="dot"></span>FITMATCH</div>' +
+        '<div style="max-width:280px;text-align:center;font-size:12px;color:var(--text-faint);line-height:1.5;">Ocurrió un error al cargar:<br>' +
+        String(e.message || "desconocido") + '</div>';
+    }
+  });
 
   // ---------------- SUPABASE ----------------
   var SUPABASE_URL = "https://yawgkkxlcjawbspfcpxf.supabase.co";
@@ -539,6 +642,10 @@
   var dragState = null;
   var openedMatchIds = {};
   var messageChannels = {};
+  var gymsData = [];
+  var gymsMapInstance = null;
+  var sharedMapInstance = null;
+  var locationChannels = {};
 
   // ---------------- HELPERS ----------------
   function $(id){ return document.getElementById(id); }
@@ -588,6 +695,15 @@
     return profile.photo ? '<img src="'+profile.photo+'" alt="">' : initialsOf(profile.name);
   }
 
+  function withTimeout(promise, ms, label){
+    return Promise.race([
+      promise,
+      new Promise(function(_, reject){
+        setTimeout(function(){ reject(new Error("Tardó demasiado: " + label)); }, ms);
+      })
+    ]);
+  }
+
   // ---------------- BOOT ----------------
   async function boot(){
     state.deviceId = getDeviceId();
@@ -598,7 +714,11 @@
     }
 
     try{
-      var res = await sb.from("profiles").select("*").eq("device_id", state.deviceId).maybeSingle();
+      var res = await withTimeout(
+        sb.from("profiles").select("*").eq("device_id", state.deviceId).maybeSingle(),
+        8000,
+        "verificando tu perfil"
+      );
       if(res.error) throw res.error;
       if(res.data){
         state.me = res.data;
@@ -684,7 +804,7 @@
       launchApp();
     } catch(err){
       console.error("Error creando perfil", err);
-      alert("No se pudo crear tu perfil. Revisa tu conexión e intenta de nuevo.");
+      alert("No se pudo crear tu perfil.\n\nDetalle: " + (err && err.message ? err.message : String(err)));
       startBtn.disabled = false;
       startBtn.textContent = "Empezar a descubrir";
     }
@@ -706,6 +826,12 @@
     loadUserCount();
     fetchDiscoverQueue();
     renderDesahogo();
+    loadGymsData();
+
+    headerAvatar.style.cursor = "pointer";
+    headerAvatar.addEventListener("click", function(){
+      $("account-menu").classList.add("show");
+    });
   }
 
   // ---------------- CONTADOR DE REGISTROS ----------------
@@ -718,10 +844,42 @@
     }
   }
 
+  // ---------------- GIMNASIOS Y MAPA ----------------
+  async function loadGymsData(){
+    try{
+      var res = await sb.from("gyms").select("*");
+      if(res.error) throw res.error;
+      gymsData = res.data || [];
+    } catch(err){
+      console.error("Error cargando gimnasios", err);
+      gymsData = [];
+    }
+  }
+
+  function ensureGymsMap(){
+    if(!window.L){
+      $("gyms-map").innerHTML = '<div style="padding:30px;text-align:center;color:var(--text-soft);font-size:13px;">No se pudo cargar el mapa. Revisa tu conexión.</div>';
+      return;
+    }
+    if(!gymsMapInstance){
+      gymsMapInstance = L.map("gyms-map").setView([19.4326, -99.1332], 12);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+        maxZoom: 19
+      }).addTo(gymsMapInstance);
+      gymsData.forEach(function(g){
+        L.marker([g.lat, g.lng]).addTo(gymsMapInstance)
+          .bindPopup("<strong>" + escapeHtml(g.name) + "</strong><br>" + escapeHtml(g.address || ""));
+      });
+    }
+    setTimeout(function(){ if(gymsMapInstance){ gymsMapInstance.invalidateSize(); } }, 60);
+  }
+
   // ---------------- TABS ----------------
   var TAB_TITLES = {
     descubre: {title:"Descubre", sub:"Cerca de "},
     matches: {title:"Tus matches", sub:"Conversaciones"},
+    mapa: {title:"Mapa", sub:"Gimnasios en CDMX"},
     desahogo: {title:"Desahogo", sub:"Solo tú y tu espacio"}
   };
 
@@ -741,6 +899,7 @@
     $("header-sub").textContent = tab === "descubre" ? (meta.sub + (state.me.city || "ti")) : meta.sub;
 
     if(tab === "matches"){ fetchMatches(); }
+    if(tab === "mapa"){ ensureGymsMap(); }
   }
 
   // ---------------- DESCUBRE / SWIPE ----------------
@@ -1059,6 +1218,9 @@
       console.error("Error cargando mensajes", err);
       $("cv-messages").innerHTML = '<div style="text-align:center;color:var(--text-faint);font-size:13px;padding:20px;">No se pudieron cargar los mensajes.</div>';
     }
+
+    refreshLocationShareUI(id);
+    subscribeToLocationShares(id);
   }
 
   function renderChatMessages(msgs){
@@ -1113,9 +1275,128 @@
     renderMatchesList();
   }
 
+  // ---------------- UBICACIÓN COMPARTIDA (solo tras match + consentimiento mutuo) ----------------
+  async function refreshLocationShareUI(matchId){
+    try{
+      var res = await sb.from("location_shares").select("*").eq("match_id", matchId);
+      if(res.error) throw res.error;
+      var rows = res.data || [];
+      var mine = rows.find(function(r){ return r.user_id === state.me.id; });
+      var theirs = rows.find(function(r){ return r.user_id !== state.me.id; });
+      renderLocationBar(matchId, mine, theirs);
+    } catch(err){
+      console.error("Error revisando ubicación compartida", err);
+    }
+  }
+
+  function renderLocationBar(matchId, mine, theirs){
+    if(state.activeChatId !== matchId) return;
+    var bar = $("cv-location-bar");
+    var m = findMatch(matchId);
+    var otherName = m ? m.other.name : "tu match";
+    var mineOn = !!(mine && mine.enabled);
+    var theirOn = !!(theirs && theirs.enabled);
+
+    if(mineOn && theirOn){
+      bar.innerHTML = '📍 Ambos compartieron su ubicación.';
+      showSharedMap(mine, theirs, otherName);
+    } else if(mineOn && !theirOn){
+      bar.innerHTML = 'Ya compartiste tu ubicación. Esperando a que ' + escapeHtml(otherName) + ' haga lo mismo.';
+      hideSharedMap();
+    } else {
+      bar.innerHTML = '<button id="cv-share-location-btn" class="upload-btn">Compartir mi ubicación con ' + escapeHtml(otherName) + '</button>';
+      hideSharedMap();
+      var btn = $("cv-share-location-btn");
+      if(btn){ btn.addEventListener("click", function(){ enableLocationShare(matchId); }); }
+    }
+  }
+
+  async function enableLocationShare(matchId){
+    var btn = $("cv-share-location-btn");
+    if(btn){ btn.disabled = true; btn.textContent = "Obteniendo tu ubicación..."; }
+    var coords = await requestLocation();
+    if(!coords){
+      alert("No se pudo obtener tu ubicación. Revisa los permisos de ubicación de tu navegador e intenta de nuevo.");
+      refreshLocationShareUI(matchId);
+      return;
+    }
+    try{
+      var res = await sb.from("location_shares").upsert({
+        match_id: matchId,
+        user_id: state.me.id,
+        enabled: true,
+        lat: coords.lat,
+        lng: coords.lng,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "match_id,user_id" });
+      if(res.error) throw res.error;
+      subscribeToLocationShares(matchId);
+      refreshLocationShareUI(matchId);
+    } catch(err){
+      console.error("Error compartiendo ubicación", err);
+      alert("No se pudo compartir tu ubicación.\n\nDetalle: " + (err && err.message ? err.message : String(err)));
+      refreshLocationShareUI(matchId);
+    }
+  }
+
+  function subscribeToLocationShares(matchId){
+    if(locationChannels[matchId]) return;
+    try{
+      var channel = sb.channel("location-" + matchId)
+        .on("postgres_changes", {
+          event: "*",
+          schema: "public",
+          table: "location_shares",
+          filter: "match_id=eq." + matchId
+        }, function(){
+          refreshLocationShareUI(matchId);
+        })
+        .subscribe();
+      locationChannels[matchId] = channel;
+    } catch(err){
+      console.error("No se pudo suscribir a ubicación en vivo", err);
+    }
+  }
+
+  function showSharedMap(mine, theirs, otherName){
+    if(!window.L){ return; }
+    var mapEl = $("cv-shared-map");
+    mapEl.style.display = "block";
+    if(sharedMapInstance){ sharedMapInstance.remove(); sharedMapInstance = null; }
+
+    sharedMapInstance = L.map("cv-shared-map").setView([mine.lat, mine.lng], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors",
+      maxZoom: 19
+    }).addTo(sharedMapInstance);
+    L.marker([mine.lat, mine.lng]).addTo(sharedMapInstance).bindPopup("Tú");
+    L.marker([theirs.lat, theirs.lng]).addTo(sharedMapInstance).bindPopup(escapeHtml(otherName));
+
+    var midLat = (mine.lat + theirs.lat) / 2;
+    var midLng = (mine.lng + theirs.lng) / 2;
+    var nearbyGyms = gymsData.map(function(g){
+      return { g: g, d: haversineKm(midLat, midLng, g.lat, g.lng) };
+    }).sort(function(a, b){ return a.d - b.d; }).slice(0, 3);
+
+    nearbyGyms.forEach(function(item){
+      L.marker([item.g.lat, item.g.lng], { opacity: 0.75 }).addTo(sharedMapInstance)
+        .bindPopup("🏋️ " + escapeHtml(item.g.name));
+    });
+
+    setTimeout(function(){ if(sharedMapInstance){ sharedMapInstance.invalidateSize(); } }, 60);
+  }
+
+  function hideSharedMap(){
+    var mapEl = $("cv-shared-map");
+    mapEl.style.display = "none";
+    if(sharedMapInstance){ sharedMapInstance.remove(); sharedMapInstance = null; }
+  }
+
   $("chat-back").addEventListener("click", function(){
     $("chat-view").classList.remove("open");
     state.activeChatId = null;
+    hideSharedMap();
+    $("cv-location-bar").innerHTML = "";
   });
 
   $("cv-menu").addEventListener("click", function(){
@@ -1156,6 +1437,102 @@
   $("cv-send").addEventListener("click", sendMatchMessage);
   $("cv-input").addEventListener("keydown", function(e){ if(e.key === "Enter") sendMatchMessage(); });
 
+
+  // ---------------- MENÚ DE CUENTA (editar perfil / eliminar cuenta) ----------------
+  var editTypeRow = $("edit-type-row");
+  var editPhotoInput = $("edit-photo-input");
+  var editPhotoPreview = $("edit-photo-preview");
+  var editPendingPhoto = null;
+
+  $("am-close").addEventListener("click", function(){
+    $("account-menu").classList.remove("show");
+  });
+
+  $("am-edit").addEventListener("click", function(){
+    $("account-menu").classList.remove("show");
+    $("edit-name-input").value = state.me.name || "";
+    $("edit-bio-input").value = state.me.bio || "";
+    $("edit-city-input").value = state.me.city || "";
+    editPendingPhoto = null;
+    if(state.me.photo){ editPhotoPreview.innerHTML = '<img src="'+state.me.photo+'" alt="">'; }
+    else { editPhotoPreview.textContent = initialsOf(state.me.name); }
+    editTypeRow.querySelectorAll(".type-opt").forEach(function(o){
+      var match = o.getAttribute("data-val") === state.me.activity;
+      o.classList.toggle("active", match);
+      o.querySelector("input").checked = match;
+    });
+    $("edit-modal").classList.add("show");
+  });
+
+  editTypeRow.addEventListener("click", function(e){
+    var opt = e.target.closest(".type-opt");
+    if(!opt) return;
+    editTypeRow.querySelectorAll(".type-opt").forEach(function(o){ o.classList.remove("active"); });
+    opt.classList.add("active");
+    opt.querySelector("input").checked = true;
+  });
+
+  editPhotoInput.addEventListener("change", function(){
+    var file = editPhotoInput.files && editPhotoInput.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e){
+      editPendingPhoto = e.target.result;
+      editPhotoPreview.innerHTML = '<img src="'+e.target.result+'" alt="">';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  $("edit-cancel-btn").addEventListener("click", function(){
+    $("edit-modal").classList.remove("show");
+  });
+
+  $("edit-save-btn").addEventListener("click", async function(){
+    var name = $("edit-name-input").value.trim();
+    if(!name){ alert("Escribe tu nombre."); return; }
+    var typeInput = editTypeRow.querySelector('input[name="edit-type"]:checked');
+    var typeVal = typeInput ? typeInput.value : state.me.activity;
+    var city = $("edit-city-input").value.trim() || "Ciudad de México";
+    var bio = $("edit-bio-input").value.trim();
+
+    var payload = { name: name, activity: typeVal, city: city, bio: bio || null };
+    if(editPendingPhoto){ payload.photo = editPendingPhoto; }
+
+    var saveBtn = $("edit-save-btn");
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Guardando...";
+
+    try{
+      var res = await sb.from("profiles").update(payload).eq("id", state.me.id).select().single();
+      if(res.error) throw res.error;
+      state.me = res.data;
+      $("edit-modal").classList.remove("show");
+
+      var headerAvatar = $("header-avatar");
+      if(state.me.photo){ headerAvatar.innerHTML = '<img src="'+state.me.photo+'" alt="">'; }
+      else { headerAvatar.innerHTML = ""; headerAvatar.textContent = initialsOf(state.me.name); headerAvatar.style.background = "var(--pulse)"; }
+      $("header-sub").textContent = "Cerca de " + (state.me.city || "ti");
+      fetchDiscoverQueue();
+    } catch(err){
+      alert("No se pudo guardar.\n\nDetalle: " + (err && err.message ? err.message : String(err)));
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Guardar cambios";
+    }
+  });
+
+  $("am-delete").addEventListener("click", async function(){
+    var sure = confirm("¿Seguro que quieres eliminar tu cuenta? Esto borra tu perfil, tus likes, tus matches y tus mensajes. No se puede deshacer.");
+    if(!sure) return;
+    try{
+      var res = await sb.from("profiles").delete().eq("id", state.me.id);
+      if(res.error) throw res.error;
+      localStorage.removeItem("fitmatch_device_id");
+      location.reload();
+    } catch(err){
+      alert("No se pudo eliminar tu cuenta.\n\nDetalle: " + (err && err.message ? err.message : String(err)));
+    }
+  });
 
   // ---------------- DESAHOGO (IA real) ----------------
   function desahogoBubbleHTML(msg){
@@ -1232,3 +1609,4 @@
 })();
 </script>
 </body>
+</html>
