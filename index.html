@@ -865,6 +865,7 @@
     fetchDiscoverQueue();
     renderDesahogo();
     loadGymsData();
+    subscribeToMyMatches();
 
     headerAvatar.style.cursor = "pointer";
     headerAvatar.addEventListener("click", function(){
@@ -1252,6 +1253,72 @@
   });
 
   // ---------------- MATCHES ----------------
+  // ---------------- SONIDO DE NOTIFICACIÓN ----------------
+  var audioCtx = null;
+  function playNotificationSound(type){
+    try{
+      if(!audioCtx){
+        var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if(!AudioContextClass) return;
+        audioCtx = new AudioContextClass();
+      }
+      if(audioCtx.state === "suspended"){ audioCtx.resume(); }
+
+      var now = audioCtx.currentTime;
+      var notes = type === "match" ? [660, 880] : [740];
+
+      notes.forEach(function(freq, i){
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        var startAt = now + i * 0.12;
+        gain.gain.setValueAtTime(0, startAt);
+        gain.gain.linearRampToValueAtTime(0.2, startAt + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, startAt + 0.28);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(startAt);
+        osc.stop(startAt + 0.3);
+      });
+    } catch(err){
+      console.error("No se pudo reproducir el sonido de notificación", err);
+    }
+  }
+
+  // ---------------- MATCHES EN VIVO (avisa aunque no estés swipeando) ----------------
+  function subscribeToMyMatches(){
+    try{
+      sb.channel("my-matches-a")
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "matches", filter: "user_a=eq." + state.me.id }, handleRealtimeNewMatch)
+        .subscribe();
+      sb.channel("my-matches-b")
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "matches", filter: "user_b=eq." + state.me.id }, handleRealtimeNewMatch)
+        .subscribe();
+    } catch(err){
+      console.error("No se pudo suscribir a matches en vivo", err);
+    }
+  }
+
+  async function handleRealtimeNewMatch(payload){
+    var row = payload.new;
+    var exists = state.matches.some(function(m){ return m.id === row.id; });
+    if(exists) return;
+
+    try{
+      var otherId = row.user_a === state.me.id ? row.user_b : row.user_a;
+      var profRes = await sb.from("profiles").select("*").eq("id", otherId).single();
+      if(profRes.error) throw profRes.error;
+
+      state.matches.unshift({ id: row.id, other: profRes.data, lastMessage: null, lastMessageAt: row.created_at });
+      renderMatchesList();
+      subscribeToMatchMessages(row.id);
+      playNotificationSound("match");
+    } catch(err){
+      console.error("Error procesando match en vivo", err);
+    }
+  }
+
   function handleNewMatch(profile, matchRow){
     var exists = state.matches.some(function(m){ return m.id === matchRow.id; });
     if(!exists){
@@ -1264,6 +1331,7 @@
       renderMatchesList();
       subscribeToMatchMessages(matchRow.id);
     }
+    playNotificationSound("match");
     showMatchModal(profile, matchRow.id);
   }
 
@@ -1448,6 +1516,9 @@
     }
     if(state.activeChatId === matchId && msg.sender_id !== state.me.id){
       appendMessageToChatView(msg);
+    }
+    if(msg.sender_id !== state.me.id){
+      playNotificationSound("message");
     }
     renderMatchesList();
   }
